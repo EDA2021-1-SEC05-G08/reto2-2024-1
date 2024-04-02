@@ -162,12 +162,11 @@ def req_3(control):
     pass
 
 
-def req_4(control):
+def req_4(control, pais, fecha_inicial, fecha_final):
     """
     Retorna el resultado del requerimiento 4
     """
-    # TODO: Modificar el requerimiento 4
-    pass
+    return model.req_4(control, pais, fecha_inicial, fecha_final)
 
 
 def req_5(control):

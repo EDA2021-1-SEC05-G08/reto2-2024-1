@@ -283,12 +283,95 @@ def req_3(data_structs):
     pass
 
 
-def req_4(data_structs):
+def req_4(control, pais, fecha_inicial, fecha_final):
     """
     Función que soluciona el requerimiento 4
     """
-    # TODO: Realizar el requerimiento 4
-    pass
+    jobs = control['jobs']
+    
+    result_jobs = lt.newList('ARRAY_LIST')
+    companies = lt.newList('ARRAY_LIST')
+    cities_quantity = mp.newMap(
+        250000,
+        maptype='PROBING',
+        loadfactor=0.5
+    )
+    
+    for job_id in lt.iterator(mp.keySet(jobs)):
+        job = me.getValue(mp.get(jobs, job_id))
+        
+        if job['country_code'] == pais and job['published_at'] >= datetime.strptime(fecha_inicial, "%Y-%m-%d") and job['published_at'] <= datetime.strptime(fecha_final, "%Y-%m-%d"):
+            
+            lt.addLast(result_jobs, job)
+            
+            if not lt.isPresent(companies, job['company_name']):
+                lt.addLast(companies, job['company_name'])
+                
+            if not lt.isPresent(mp.keySet(cities_quantity), job['city']):
+                mp.put(cities_quantity, job['city'], 1)
+            else:
+                current_value = me.getValue(mp.get(cities_quantity, job['city']))
+                mp.put(cities_quantity, job['city'], current_value+1)
+                
+    ciudad_menor, cantidad_menor = None, float('inf')
+    
+    for city in lt.iterator(mp.keySet(cities_quantity)):
+        current_value = me.getValue(mp.get(cities_quantity, city))
+        if current_value < cantidad_menor:
+            ciudad_menor, cantidad_menor = city, current_value
+    
+    ciudad_mayor, cantidad_mayor = None, 0
+    
+    for city in lt.iterator(mp.keySet(cities_quantity)):
+        current_value = me.getValue(mp.get(cities_quantity, city))
+        if current_value > cantidad_mayor:
+            ciudad_mayor, cantidad_mayor = city, current_value
+         
+    result_jobs = sort_jobs(result_jobs)
+    
+    table_data = []
+    if lt.size(result_jobs) <= 10:
+        for job in lt.iterator(result_jobs):
+            table_data.append({
+                "Fecha de publicacion": job['published_at'],
+                "Titulo de la oferta": job['title'],
+                "Experiencia requerida": job['experience_level'],
+                "Empresa": job['company_name'],
+                "Ciudad": job['city'],
+                "Tipo de lugar de trabajo": job['workplace_type'],
+                "Tipo trabajo": job['workplace_type'],
+                "Contrata ucranianos": job['open_to_hire_ukrainians']
+            })
+    else:
+        for index in range(5):
+            job = lt.getElement(result_jobs, index)
+            table_data.append({
+                "Fecha de publicacion": job['published_at'],
+                "Titulo de la oferta": job['title'],
+                "Experiencia requerida": job['experience_level'],
+                "Empresa": job['company_name'],
+                "Ciudad": job['city'],
+                "Tipo de lugar de trabajo": job['workplace_type'],
+                "Tipo trabajo": job['workplace_type'],
+                "Contrata ucranianos": job['open_to_hire_ukrainians']
+            })
+        for index in range(lt.size(result_jobs)-5, lt.size(result_jobs)):
+            job = lt.getElement(result_jobs, index)
+            table_data.append({
+                "Fecha de publicacion": job['published_at'],
+                "Titulo de la oferta": job['title'],
+                "Experiencia requerida": job['experience_level'],
+                "Empresa": job['company_name'],
+                "Ciudad": job['city'],
+                "Tipo de lugar de trabajo": job['workplace_type'],
+                "Tipo trabajo": job['workplace_type'],
+                "Contrata ucranianos": job['open_to_hire_ukrainians']
+            })
+        
+        
+    table = tabulate(table_data, headers='keys', tablefmt='grid') 
+            
+    return (lt.size(result_jobs), lt.size(companies), lt.size(mp.keySet(cities_quantity)), ciudad_menor, cantidad_menor, ciudad_mayor, cantidad_mayor, table)
 
 
 def req_5(data_structs):

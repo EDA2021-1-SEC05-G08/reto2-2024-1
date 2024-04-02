@@ -115,8 +115,20 @@ def print_req_4(control):
     """
         Función que imprime la solución del Requerimiento 4 en consola
     """
-
-    pass
+    
+    pais = input("Ingrese el codigo del pais de interes: ")
+    fecha_inicial = input("Ingrese la fecha inicial de interes en formato YYYY-MM-DD: ")
+    fecha_final = input("Ingrese la fecha final de interes en formato YYYY-MM-DD: ")
+    
+    total_ofertas, total_empresas, total_ciudades, ciudad_menor, cantidad_menor, ciudad_mayor, cantidad_mayor, tabla = controller.req_4(control, pais, fecha_inicial, fecha_final)
+    
+    print("El total de ofertas de trabajo publicadas en el país " + pais + " entre " + fecha_inicial + " y " + fecha_final + " es: " + str(total_ofertas))
+    print("El total de empresas que publicaron ofertas de trabajo en el país " + pais + " entre " + fecha_inicial + " y " + fecha_final + " es: " + str(total_empresas))
+    print("El total de ciudades en las que se publicaron ofertas de trabajo en el país " + pais + " entre " + fecha_inicial + " y " + fecha_final + " es: " + str(total_ciudades))
+    print("La ciudad con menor cantidad de ofertas de trabajo publicadas en el país " + pais + " entre " + fecha_inicial + " y " + fecha_final + " es: " + ciudad_menor + " con " + str(cantidad_menor) + " ofertas")
+    print("La ciudad con mayor cantidad de ofertas de trabajo publicadas en el país " + pais + " entre " + fecha_inicial + " y " + fecha_final + " es: " + ciudad_mayor + " con " + str(cantidad_mayor) + " ofertas")
+    print("Listado de ofertas en orden cronológico:")
+    print(tabla)
 
 
 def print_req_5(control):

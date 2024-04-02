@@ -26,6 +26,13 @@ import time
 import csv
 import tracemalloc
 
+from DISClib.ADT import map as mp
+from DISClib.DataStructures import mapentry as me
+from DISClib.ADT import list as lt
+
+
+csv.field_size_limit(2147483647)
+
 """
 El controlador se encarga de mediar entre la vista y el modelo.
 """
@@ -35,19 +42,81 @@ def new_controller():
     """
     Crea una instancia del modelo
     """
-    #TODO: Llamar la función del modelo que crea las estructuras de datos
-    pass
-
+    return model.new_data_structs() 
 
 # Funciones para la carga de datos
 
-def load_data(control, filename):
+def load_data(control, jobs_filename, skills_filename, employment_types_filename, multilocations_filename):
     """
     Carga los datos del reto
     """
-    # TODO: Realizar la carga de datos
-    pass
+    
+    control = load_jobs(control, jobs_filename)
+    control = load_skills(control, skills_filename)
+    control = load_employment_types(control, employment_types_filename)
+    control = load_multilocations(control, multilocations_filename)
+    
+    return (control, model.data_size(control['jobs_sorted']), model.create_table(control['jobs_sorted'])) 
 
+def load_jobs(control, jobs_filename):
+    """
+    Carga los datos de los trabajos
+    """
+    with open(cf.data_dir + "/Data/" + jobs_filename, newline='', encoding='utf-8') as archivo_csv:
+        lector_csv = csv.reader(archivo_csv, delimiter=';')
+
+        next(lector_csv)
+
+        for fila in lector_csv:
+            control["jobs"] = model.add_job(control["jobs"], fila)
+            model.add_job_in_list(control["jobs_sorted"], fila)
+            
+    control["jobs_sorted"] = model.sort_jobs(control["jobs_sorted"])
+    
+    return control
+
+def load_skills(control, skills_filename):
+    """
+    Carga los datos de las habilidades
+    """
+    with open(cf.data_dir + "/Data/" + skills_filename, newline='', encoding='utf-8') as archivo_csv:
+        lector_csv = csv.reader(archivo_csv, delimiter=';')
+
+        for fila in lector_csv:
+            control["skills"] = model.add_skill(control["skills"], fila)
+    
+    return control
+
+def load_employment_types(control, employment_types_filename):
+    """
+    Carga los datos de los tipos de empleo
+    """
+    with open(cf.data_dir + "/Data/" + employment_types_filename, newline='', encoding='utf-8') as archivo_csv:
+        lector_csv = csv.reader(archivo_csv, delimiter=';')
+
+        for fila in lector_csv:
+            control["employment_types"] = model.add_employment_type(control["employment_types"], fila)
+    
+    return control
+
+def load_multilocations(control, multilocations_filename):
+    """
+    Carga los datos de las locaciones
+    """
+    with open(cf.data_dir + "/Data/" + multilocations_filename, newline='', encoding='utf-8') as archivo_csv:
+        lector_csv = csv.reader(archivo_csv, delimiter=';')
+
+        for fila in lector_csv:
+            control["multilocations"] = model.add_multilocation(control["multilocations"], fila)
+    
+    return control
+
+"""
+struct = load_data(new_controller(), 'small-jobs.csv', 'small-skills.csv', 'small-employments_types.csv', 'small-multilocations.csv')
+jobs = (struct["jobs_sorted"])
+for job in lt.iterator(jobs):
+    print(job['published_at'].strftime("%Y-%m-%dT%H:%M:%S"))
+"""
 
 # Funciones de ordenamiento
 

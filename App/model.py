@@ -38,6 +38,9 @@ from DISClib.Algorithms.Sorting import mergesort as merg
 from DISClib.Algorithms.Sorting import quicksort as quk
 assert cf
 
+from datetime import datetime
+from tabulate import tabulate
+
 """
 Se define la estructura de un catálogo de videos. El catálogo tendrá
 dos listas, una para los videos, otra para las categorias de los mismos.
@@ -51,19 +54,150 @@ def new_data_structs():
     Inicializa las estructuras de datos del modelo. Las crea de
     manera vacía para posteriormente almacenar la información.
     """
-    #TODO: Inicializar las estructuras de datos
-    pass
-
+    
+    data_structs = {
+        
+        "jobs": None,
+        "skills": None,
+        "employment_types": None,
+        "multilocations": None,
+        
+        "jobs_sorted": None
+        
+    }
+    
+    data_structs['jobs'] = mp.newMap(
+        250000,
+        maptype='PROBING',
+        loadfactor=0.5
+    )
+    
+    data_structs['skills'] = mp.newMap(
+        580000,
+        maptype='PROBING',
+        loadfactor=0.5
+    )
+    
+    data_structs['employment_types'] = mp.newMap(
+        260000,
+        maptype='PROBING',
+        loadfactor=0.5
+    )
+    
+    data_structs['multilocations'] = mp.newMap(
+        250000,
+        maptype='PROBING',
+        loadfactor=0.5
+    )
+    
+    data_structs["jobs_sorted"] = lt.newList('ARRAY_LIST')
+    
+    return data_structs
 
 # Funciones para agregar informacion al modelo
 
-def add_data(data_structs, data):
-    """
-    Función para agregar nuevos elementos a la lista
-    """
-    #TODO: Crear la función para agregar elementos a una lista
-    pass
+def add_job(jobs_map, job):
+    
+    job_dict = {
+        "title": job[0],
+        "street": None if job[1] == "NOT DEFINED" else job[1],
+        "city": job[2],
+        "country_code": job[3],
+        "address_text": job[4],
+        "maker_icon": job[5],
+        "workplace_type": job[6],
+        "company_name": job[7],
+        "company_url": job[8],
+        "company_size": None if job[9]=="Undefined" else int(job[9]),
+        "experience_level": job[10],
+        "published_at": datetime.strptime(job[11].split(".")[0], "%Y-%m-%dT%H:%M:%S"),
+        "remote_interview": bool(job[12]),
+        "open_to_hire_ukrainians": bool(job[13]),
+        "display_offer": bool(job[15]),     
+    }
+    
+    mp.put(jobs_map, job[14], job_dict)
+    
+    return jobs_map
 
+def add_job_in_list(jobs_list, job):
+    
+    job_dict = {
+        "title": job[0],
+        "street": None if job[1] == "NOT DEFINED" else job[1],
+        "city": job[2],
+        "country_code": job[3],
+        "address_text": job[4],
+        "maker_icon": job[5],
+        "workplace_type": job[6],
+        "company_name": job[7],
+        "company_url": job[8],
+        "company_size": None if job[9]=="Undefined" else int(job[9]),
+        "experience_level": job[10],
+        "published_at": datetime.strptime(job[11].split(".")[0], "%Y-%m-%dT%H:%M:%S"),
+        "remote_interview": bool(job[12]),
+        "open_to_hire_ukrainians": bool(job[13]),
+        "display_offer": bool(job[15]),     
+    }
+    
+    
+    lt.addLast(jobs_list, job_dict)
+
+def add_skill(skills_map, skill):
+    
+    skill_dict = {
+        "name": skill[0],
+        "level": skill[1] 
+    }
+
+    if mp.contains(skills_map, skill[2]):
+        current__values = me.getValue(mp.get(skills_map, skill[2]))
+        lt.addLast(current__values, skill_dict)
+        mp.put(skills_map, skill[2], current__values)
+    else:
+        value = lt.newList('ARRAY_LIST')
+        lt.addLast(value, skill_dict)
+        mp.put(skills_map, skill[2], value)
+    
+    return skills_map
+
+def add_employment_type(employment_types_map, employment_type):
+    
+    employment_type_dict = {
+        "type": employment_type[0],
+        "currency_salary": employment_type[2],
+        "salary_from": employment_type[3],
+        "salary_to": employment_type[4],
+    }
+    
+    if mp.contains(employment_types_map, employment_type[1]):
+        current__values = me.getValue(mp.get(employment_types_map, employment_type[1]))
+        lt.addLast(current__values, employment_type_dict)
+        mp.put(employment_types_map, employment_type[1], current__values)
+    else:
+        value = lt.newList('ARRAY_LIST')
+        lt.addLast(value, employment_type_dict)
+        mp.put(employment_types_map, employment_type[1], value)
+    
+    return employment_types_map
+
+def add_multilocation(multilocations_map, multilocation):
+
+    multilocation_dict = {
+        "city": multilocation[0],
+        "street": multilocation[1] 
+    }
+    
+    if mp.contains(multilocations_map, multilocation[2]):
+        current__values = me.getValue(mp.get(multilocations_map, multilocation[2]))
+        lt.addLast(current__values, multilocation_dict)
+        mp.put(multilocations_map, multilocation[2], current__values)
+    else:
+        value = lt.newList('ARRAY_LIST')
+        lt.addLast(value, multilocation_dict)
+        mp.put(multilocations_map, multilocation[2], value)
+    
+    return multilocations_map
 
 # Funciones para creacion de datos
 
@@ -85,12 +219,44 @@ def get_data(data_structs, id):
     pass
 
 
-def data_size(data_structs):
+def data_size(list):
     """
     Retorna el tamaño de la lista de datos
     """
-    #TODO: Crear la función para obtener el tamaño de una lista
-    pass
+    return lt.size(list)
+
+def create_table(data):
+    """
+    Crea una tabla de datos
+    """
+    
+    data_list = []
+    
+    for index in range(1,4):
+        job = lt.getElement(data, index)
+        formatted_job = {
+            "Fecha de publicacion": job['published_at'],
+            "Titulo de la oferta": job['title'],
+            "Empresa": job['company_name'],
+            "Nivel de experticia": job['experience_level'],
+            "Pais de la oferta": job['country_code'],
+            "Ciudad de la oferta": job['city']
+        }
+        data_list.append(formatted_job)
+        
+    for index in range(lt.size(data)-3, lt.size(data)):
+        job = lt.getElement(data, index)
+        formatted_job = {
+            "Fecha de publicacion": job['published_at'],
+            "Titulo de la oferta": job['title'],
+            "Empresa": job['company_name'],
+            "Nivel de experticia": job['experience_level'],
+            "Pais de la oferta": job['country_code'],
+            "Ciudad de la oferta": job['city']
+        }
+        data_list.append(formatted_job)
+    
+    return tabulate(data_list, headers='keys', tablefmt='grid')
 
 
 def req_1(data_structs):
@@ -159,33 +325,16 @@ def req_8(data_structs):
 
 # Funciones utilizadas para comparar elementos dentro de una lista
 
-def compare(data_1, data_2):
+def compare_jobs_date(job_1, job_2):
     """
     Función encargada de comparar dos datos
     """
-    #TODO: Crear función comparadora de la lista
-    pass
+    return job_1['published_at'] > job_2['published_at']
 
 # Funciones de ordenamiento
 
-
-def sort_criteria(data_1, data_2):
-    """sortCriteria criterio de ordenamiento para las funciones de ordenamiento
-
-    Args:
-        data1 (_type_): _description_
-        data2 (_type_): _description_
-
-    Returns:
-        _type_: _description_
+def sort_jobs(jobs_map):
     """
-    #TODO: Crear función comparadora para ordenar
-    pass
-
-
-def sort(data_structs):
+    Ordena los datos del modelo
     """
-    Función encargada de ordenar la lista con los datos
-    """
-    #TODO: Crear función de ordenamiento
-    pass
+    return merg.sort(jobs_map, compare_jobs_date)

@@ -39,13 +39,15 @@ se hace la solicitud al controlador para ejecutar la
 operación solicitada
 """
 
+default_limit = 1000
+sys.setrecursionlimit(default_limit*10)
+
 
 def new_controller():
     """
         Se crea una instancia del controlador
     """
-    #TODO: Llamar la función del controlador donde se crean las estructuras de datos
-    pass
+    return controller.new_controller()
 
 
 def print_menu():
@@ -66,8 +68,16 @@ def load_data(control):
     """
     Carga los datos
     """
-    #TODO: Realizar la carga de datos
-    pass
+    
+    data, jobs_quantity, table = controller.load_data(control, 'small-jobs.csv', 'small-skills.csv', 'small-employments_types.csv', 'small-multilocations.csv')
+
+    print("El total de ofertas de trabajo pulicadas cargadas es: " + str(jobs_quantity) + "\n")  
+    
+    print("Las tres primeras y tres últimas ofertas de trabajo publicadas ordenadas por la fecha de publicación son:")
+    print (table)
+    print()
+
+    return data
 
 
 def print_data(control, id):
@@ -105,7 +115,7 @@ def print_req_4(control):
     """
         Función que imprime la solución del Requerimiento 4 en consola
     """
-    # TODO: Imprimir el resultado del requerimiento 4
+
     pass
 
 
@@ -143,6 +153,7 @@ def print_req_8(control):
 
 # Se crea el controlador asociado a la vista
 control = new_controller()
+data = None
 
 # main del reto
 if __name__ == "__main__":
@@ -158,28 +169,27 @@ if __name__ == "__main__":
             print("Cargando información de los archivos ....\n")
             data = load_data(control)
         elif int(inputs) == 2:
-            print_req_1(control)
-
+            print_req_1(data)
         elif int(inputs) == 3:
-            print_req_2(control)
+            print_req_2(data)
 
         elif int(inputs) == 4:
-            print_req_3(control)
+            print_req_3(data)
 
         elif int(inputs) == 5:
-            print_req_4(control)
+            print_req_4(data)
 
         elif int(inputs) == 6:
-            print_req_5(control)
+            print_req_5(data)
 
         elif int(inputs) == 7:
-            print_req_6(control)
+            print_req_6(data)
 
         elif int(inputs) == 8:
-            print_req_7(control)
+            print_req_7(data)
 
         elif int(inputs) == 9:
-            print_req_8(control)
+            print_req_8(data)
 
         elif int(inputs) == 0:
             working = False

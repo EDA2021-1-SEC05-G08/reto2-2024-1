@@ -151,9 +151,32 @@ def print_req_7(control):
     """
         Función que imprime la solución del Requerimiento 7 en consola
     """
-    # TODO: Imprimir el resultado del requerimiento 7
-    pass
-
+    
+    N = input("Ingrese el numero de paises que quiere consultar: ")
+    anio = input("Ingrese el año de interes en formato YYYY: ")
+    mes = input("Ingrese el mes de interes en formato MM: ")
+    
+    total_ofertas, cantidad_ciudades, pais_mayor_ofertas, conteo_pais_mayor_ofertas, ciudad_mayor_ofertas, conteo_ciudad_mayor_ofertas, skills_company_info = controller.req_7(control, N, anio, mes)
+    print("El total de ofertas de trabajo publicadas en el año " + anio + " y mes " + mes + " es: " + str(total_ofertas))
+    print("El total de ciudades en las que se publicaron ofertas de trabajo en el año " + anio + " y " + mes + " en los top " + str(N) + " paises consultados es: " + str(cantidad_ciudades))
+    print("El pais con mayor cantidad de ofertas de trabajo publicadas en el año " + anio + " y " + mes + " es: " + pais_mayor_ofertas + " con " + str(conteo_pais_mayor_ofertas) + " ofertas")
+    print("La ciudad con mayor cantidad de ofertas de trabajo publicadas en el año " + anio + " y " + mes + " es: " + ciudad_mayor_ofertas + " con " + str(conteo_ciudad_mayor_ofertas) + " ofertas")
+    
+    print()
+    
+    seniorities = ["junior", "mid", "senior"]
+    
+    for seniority in range(len(seniorities)):
+        info = skills_company_info[seniority]
+        print("Informacion para el nivel de experticia " + seniorities[seniority] + ":")
+        print("Conteo de habilidades diferentes solicitadas: " + str(info["skills_count"]))
+        print("Habilidad mas solicitada: " + info["most_demanded_skill_name"] + " con " + str(info["most_demanded_skill_quantity"]) + " solicitudes")
+        print("Habilidad menos solicitada: " + info["less_demanded_skill_name"] + " con " + str(info["less_demanded_skill_quantity"]) + " solicitudes")
+        print("Conteo de empresas que publicaron una oferta con este nivel de experticia: " + str(info["companies_count"]))
+        print("Empresa con mayor cantidad de ofertas publicadas: " + info["most_offered_company_name"] + " con " + str(info["most_offered_company_quantity"]) + " ofertas")
+        print("Empresa con menor cantidad de ofertas publicadas: " + info["less_offered_company_name"] + " con " + str(info["less_offered_company_quantity"]) + " ofertas")
+        print("Número de empresas que publicaron una oferta en este nivel de experticia que tienen una o más sedes: " + str(info["companies_with_multilocation"]))
+        print()
 
 def print_req_8(control):
     """

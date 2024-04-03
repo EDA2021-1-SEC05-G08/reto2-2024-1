@@ -99,6 +99,7 @@ def new_data_structs():
 def add_job(jobs_map, job):
     
     job_dict = {
+        "id": job[14],
         "title": job[0],
         "street": None if job[1] == "NOT DEFINED" else job[1],
         "city": job[2],
@@ -328,6 +329,7 @@ def req_4(control, pais, fecha_inicial, fecha_final):
             ciudad_mayor, cantidad_mayor = city, current_value
          
     result_jobs = sort_jobs(result_jobs)
+    result_jobs = sort_jobs_by_company_name(result_jobs)
     
     table_data = []
     if lt.size(result_jobs) <= 10:
@@ -390,12 +392,172 @@ def req_6(data_structs):
     pass
 
 
-def req_7(data_structs):
+def req_7(data_structs, N, anio, mes):
     """
     Función que soluciona el requerimiento 7
     """
-    # TODO: Realizar el requerimiento 7
-    pass
+    
+    jobs = data_structs['jobs']
+    contries_quantity = mp.newMap(
+        250000,
+        maptype='PROBING',
+        loadfactor=0.5
+    )
+    
+    for job in lt.iterator(mp.keySet(jobs)):
+        job = me.getValue(mp.get(jobs, job))
+        if job['published_at'].year == int(anio) and job['published_at'].month == int(mes):
+            if not mp.contains(contries_quantity, job['country_code']):
+                mp.put(contries_quantity, job['country_code'], {"country":job['country_code'], "jobs": [job], "quantity": 1, "cities": {job['city']: 1}})
+            else:
+                current_value = me.getValue(mp.get(contries_quantity, job['country_code']))
+                current_value["quantity"] += 1
+                current_value["jobs"].append(job)
+                if job["city"] in current_value["cities"]:
+                    current_value["cities"][job["city"]] += 1
+                else:
+                    current_value["cities"][job["city"]] = 1
+                mp.put(contries_quantity, job['country_code'], current_value)
+      
+    countries_list = lt.newList('ARRAY_LIST')          
+    total_ofertas = 0
+    pais_mayor_ofertas, conteo_pais_mayor_ofertas = None, 0
+    ciudad_mayor_ofertas, conteo_ciudad_mayor_ofertas = None, 0
+    for country in lt.iterator(mp.keySet(contries_quantity)):
+        current_value = me.getValue(mp.get(contries_quantity, country))
+        lt.addLast(countries_list, current_value)
+        total_ofertas += current_value["quantity"]
+        if current_value["quantity"] > conteo_pais_mayor_ofertas:
+            pais_mayor_ofertas, conteo_pais_mayor_ofertas = country, current_value["quantity"]
+        for city in current_value["cities"]:
+            if current_value["cities"][city] > conteo_ciudad_mayor_ofertas:
+                ciudad_mayor_ofertas, conteo_ciudad_mayor_ofertas = city, current_value["cities"][city]
+       
+    countries_list = sort_by_jobs_quantity(countries_list)
+    countries_list  = lt.subList(countries_list, 1, int(N))
+    
+    cantidad_ciudades = 0
+    """
+    cada seniority tiene:
+    - una lista de las habilidades solicitadas donde cada elemento es un diccionario con el nombre de la habilidad, el numero de veces encontrada en las ofertas y el nivel de la habilidad
+    - una lista de las empresas donde cada elemento es un diccionario con el nombre de la empresa, el numero de veces encontrada en las ofertas y un booleano que indica si la empresa tiene una o mas sedes (esto se mira en mapa de multilocations buscando por el id de la oferta)
+    """
+    seniority_info = mp.newMap(
+        3,
+        maptype='PROBING',
+        loadfactor=0.5
+    )
+    for seniority in ["junior", "mid", "senior"]:
+        mp.put(seniority_info, seniority, {"skills": {}, "companies": {}})
+    
+    for country in lt.iterator(countries_list):
+        cantidad_ciudades += len(country["cities"])
+        
+        for job in country["jobs"]:
+            
+            seniority_level = job["experience_level"]
+            job_id = job["id"]
+            skills = me.getValue(mp.get(data_structs["skills"], job_id))
+            for skill in lt.iterator(skills):
+                if skill["name"] in me.getValue(mp.get(seniority_info, seniority_level))["skills"]:
+                    current_skill_info = me.getValue(mp.get(seniority_info, seniority_level))["skills"][skill["name"]]
+                    current_skill_info["quantity"] += 1
+                else:
+                    (me.getValue(mp.get(seniority_info, seniority_level))["skills"])[skill["name"]] = {
+                        "quantity": 1,
+                        "level": skill["level"]
+                    }
+                    
+            company_name = job["company_name"]
+            if company_name in me.getValue(mp.get(seniority_info, seniority_level))["companies"]:
+                current_company_info = me.getValue(mp.get(seniority_info, seniority_level))["companies"][company_name]
+                current_company_info["quantity"] += 1
+            else:
+                is_multilocation = False
+                if mp.contains(data_structs["multilocations"], job_id):
+                    is_multilocation = True
+                (me.getValue(mp.get(seniority_info, seniority_level))["companies"])[company_name] = {
+                    "quantity": 1,
+                    "multilocation": is_multilocation
+                }
+    
+    """
+    junior_skills_count = len(me.getValue(mp.get(seniority_info, "junior"))["skills"])
+    junior_skills = lt.newList('ARRAY_LIST')
+    for skill in me.getValue(mp.get(seniority_info, "junior"))["skills"]:
+        skill_info = me.getValue(mp.get(seniority_info, "junior"))["skills"][skill]
+        skill_info["name"] = skill
+        lt.addLast(junior_skills, skill_info)
+    junior_skills_ordered = sort_by_jobs_quantity(junior_skills)
+    junior_most_demanded_skill_name = lt.getElement(junior_skills_ordered, 1)["name"]
+    junior_most_demanded_skill_quantity = lt.getElement(junior_skills_ordered, 1)["quantity"]
+    junior_less_demanded_skill_name = lt.getElement(junior_skills_ordered, junior_skills_count)["name"]
+    junior_less_demanded_skill_quantity = lt.getElement(junior_skills_ordered, junior_skills_count)["quantity"]
+    junior_mean_level = 0
+    for skill in lt.iterator(junior_skills):
+        junior_mean_level += int(skill["level"])
+    junior_mean_level /= junior_skills_count
+    junior_companies_count = len(me.getValue(mp.get(seniority_info, "junior"))["companies"])
+    junior_companies = lt.newList('ARRAY_LIST')
+    junior_companies_whit_multilocation = 0
+    for company in me.getValue(mp.get(seniority_info, "junior"))["companies"]:
+        junior_companies_whit_multilocation += 1 if me.getValue(mp.get(seniority_info, "junior"))["companies"][company]["multilocation"] else 0
+        company_info = me.getValue(mp.get(seniority_info, "junior"))["companies"][company]
+        company_info["name"] = company
+        lt.addLast(junior_companies, company_info)
+    junior_companies_ordered = sort_by_jobs_quantity(junior_companies)
+    junior_most_offered_company_name = lt.getElement(junior_companies_ordered, 1)["name"]
+    junior_most_offered_company_quantity = lt.getElement(junior_companies_ordered, 1)["quantity"]
+    junior_less_offered_company_name = lt.getElement(junior_companies_ordered, junior_companies_count)["name"]
+    junior_less_offered_company_quantity = lt.getElement(junior_companies_ordered, junior_companies_count)["quantity"]
+    """
+    
+    skills_companies_info = []
+    for seniority in ["junior", "mid", "senior"]:
+        info = {}
+        junior_skills_count = len(me.getValue(mp.get(seniority_info, seniority))["skills"])
+        info["skills_count"] = junior_skills_count
+        junior_skills = lt.newList('ARRAY_LIST')
+        for skill in me.getValue(mp.get(seniority_info, seniority))["skills"]:
+            skill_info = me.getValue(mp.get(seniority_info, seniority))["skills"][skill]
+            skill_info["name"] = skill
+            lt.addLast(junior_skills, skill_info)
+        junior_skills_ordered = sort_by_jobs_quantity(junior_skills)
+        junior_most_demanded_skill_name = lt.getElement(junior_skills_ordered, 1)["name"]
+        info["most_demanded_skill_name"] = junior_most_demanded_skill_name
+        junior_most_demanded_skill_quantity = lt.getElement(junior_skills_ordered, 1)["quantity"]
+        info["most_demanded_skill_quantity"] = junior_most_demanded_skill_quantity
+        junior_less_demanded_skill_name = lt.getElement(junior_skills_ordered, junior_skills_count)["name"]
+        info["less_demanded_skill_name"] = junior_less_demanded_skill_name
+        junior_less_demanded_skill_quantity = lt.getElement(junior_skills_ordered, junior_skills_count)["quantity"]
+        info["less_demanded_skill_quantity"] = junior_less_demanded_skill_quantity
+        junior_mean_level = 0
+        for skill in lt.iterator(junior_skills):
+            junior_mean_level += int(skill["level"])
+        junior_mean_level /= junior_skills_count
+        info["mean_level"] = junior_mean_level
+        junior_companies_count = len(me.getValue(mp.get(seniority_info, seniority))["companies"])
+        info["companies_count"] = junior_companies_count
+        junior_companies = lt.newList('ARRAY_LIST')
+        junior_companies_whit_multilocation = 0
+        for company in me.getValue(mp.get(seniority_info, seniority))["companies"]:
+            junior_companies_whit_multilocation += 1 if me.getValue(mp.get(seniority_info, seniority))["companies"][company]["multilocation"] else 0
+            company_info = me.getValue(mp.get(seniority_info, seniority))["companies"][company]
+            company_info["name"] = company
+            lt.addLast(junior_companies, company_info)
+        info["companies_with_multilocation"] = junior_companies_whit_multilocation
+        junior_companies_ordered = sort_by_jobs_quantity(junior_companies)
+        junior_most_offered_company_name = lt.getElement(junior_companies_ordered, 1)["name"]
+        info["most_offered_company_name"] = junior_most_offered_company_name
+        junior_most_offered_company_quantity = lt.getElement(junior_companies_ordered, 1)["quantity"]
+        info["most_offered_company_quantity"] = junior_most_offered_company_quantity
+        junior_less_offered_company_name = lt.getElement(junior_companies_ordered, junior_companies_count)["name"]
+        info["less_offered_company_name"] = junior_less_offered_company_name
+        junior_less_offered_company_quantity = lt.getElement(junior_companies_ordered, junior_companies_count)["quantity"]
+        info["less_offered_company_quantity"] = junior_less_offered_company_quantity        
+        skills_companies_info.append(info)
+        
+    return total_ofertas, cantidad_ciudades, pais_mayor_ofertas, conteo_pais_mayor_ofertas, ciudad_mayor_ofertas, conteo_ciudad_mayor_ofertas, skills_companies_info
 
 
 def req_8(data_structs):
@@ -414,6 +576,19 @@ def compare_jobs_date(job_1, job_2):
     """
     return job_1['published_at'] > job_2['published_at']
 
+def compare_jobs_quantity(job_1, job_2):
+    """
+    Función encargada de comparar dos datos
+    """
+    return job_1['quantity'] > job_2['quantity']
+
+def compare_jobs_company_name(job_1, job_2):
+    """
+    Función encargada de comparar dos datos
+    """
+    if job_1['published_at'] == job_2['published_at']:
+        return job_1['company_name'] < job_2['company_name']
+
 # Funciones de ordenamiento
 
 def sort_jobs(jobs_map):
@@ -421,3 +596,15 @@ def sort_jobs(jobs_map):
     Ordena los datos del modelo
     """
     return merg.sort(jobs_map, compare_jobs_date)
+
+def sort_by_jobs_quantity(jobs_map):
+    """
+    Ordena los datos del modelo
+    """
+    return merg.sort(jobs_map, compare_jobs_quantity)
+
+def sort_jobs_by_company_name(jobs_map):
+    """
+    Ordena los datos del modelo
+    """
+    return merg.sort(jobs_map, compare_jobs_company_name)
